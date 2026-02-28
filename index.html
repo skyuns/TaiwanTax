@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>綜合所得稅簡易試算器</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            font-size: 13px;
+        }
+
+        @media (min-width: 1440px) {
+            :root { font-size: 15px; }
+            .app-container { max-width: 1150px !important; }
+        }
+
+        @media (min-width: 1920px) {
+            :root { font-size: 18px; }
+            .app-container { max-width: 1350px !important; }
+        }
+
+        @media (min-width: 2560px) {
+            :root { font-size: 24px; }
+            .app-container { max-width: 1800px !important; }
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+            background-color: #f8fafc; 
+            font-size: 1rem;
+            color: #0f172a;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 4px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1024px;
+            height: 96vh;
+            background-color: white;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        header {
+            background-color: #f1f5f9;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-title { font-weight: 900; font-style: italic; font-size: 1.1rem; color: #1e293b; display: flex; align-items: center; gap: 0.6rem; }
+        .year-select { background-color: #4f46e5; color: white; font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; outline: none; }
+        .header-subtitle { font-size: 0.7rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .main-content { flex: 1; display: grid; grid-template-columns: 1fr; overflow: hidden; }
+        @media (min-width: 768px) { .main-content { grid-template-columns: repeat(12, 1fr); } }
+
+        .sidebar { 
+            grid-column: span 4; 
+            border-right: 1px solid #f1f5f9; 
+            padding: 0.5rem; 
+            overflow-y: auto; 
+            background-color: white; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 0.4rem; 
+        }
+        section { display: flex; flex-direction: column; gap: 0.25rem; }
+        h2 { font-size: 0.85rem; font-weight: bold; color: #4f46e5; text-transform: uppercase; letter-spacing: 0.1em; border-left: 3px solid #4f46e5; padding-left: 0.6rem; margin-bottom: 1px; }
+        h2.secondary { color: #334155; border-left-color: #94a3b8; }
+
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; }
+        .input-group { display: flex; flex-direction: column; gap: 0.1rem; position: relative; }
+        .input-group.full { grid-column: span 2; }
+
+        @media (max-width: 767px) {
+            .base-info-grid {
+                grid-template-columns: 1.6fr 0.7fr 0.7fr !important;
+                align-items: end;
+            }
+            .base-info-grid .input-group.full { grid-column: span 1 !important; }
+            .base-info-grid .toggle-container, .base-info-grid input { height: 2.2rem !important; display: flex; align-items: center; }
+
+            .special-grid { grid-template-columns: repeat(4, 1fr) !important; }
+            .special-grid .input-group:last-child { grid-column: auto !important; }
+            
+            .income-sub-grid { grid-template-columns: repeat(3, 1fr) !important; }
+            .income-bottom-grid { grid-template-columns: repeat(3, 1fr) !important; }
+
+            label { font-size: 0.68rem !important; white-space: normal !important; line-height: 1.1 !important; height: auto !important; margin-bottom: 2px !important; }
+            .input-inline-hint { left: 2.2rem !important; font-size: 0.6rem !important; }
+        }
+
+        label { 
+            font-size: 0.7rem; 
+            color: #94a3b8; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+        }
+
+        .label-dark { color: #4b5563; font-weight: 500; }
+        .label-strong { color: #4f46e5; font-weight: 900; }
+
+        .filing-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1px; }
+        .total-count-badge { font-size: 0.75rem; font-weight: 900; color: #4f46e5; background: #eef2ff; padding: 1px 5px; border-radius: 4px; }
+
+        .toggle-container { display: flex; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; background-color: #f1f5f9; padding: 1px; gap: 1px; }
+        .toggle-btn { 
+            flex: 1; border: none; padding: 0.3rem; font-size: 0.8rem; cursor: pointer; 
+            background: transparent; color: #64748b; font-weight: bold; border-radius: 4px; 
+            transition: all 0.2s; text-align: center;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .toggle-btn.active { background-color: white; color: #4f46e5; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+        .relative-input-wrapper { position: relative; display: flex; align-items: center; width: 100%; }
+        input {
+            width: 100%;
+            padding: 0.25rem 0.5rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.9rem;
+            outline: none;
+            background-color: white;
+            color: #1e293b;
+        }
+        input:focus { border-color: #4f46e5; box-shadow: 0 0 0 1px #4f46e5; }
+        .input-special { background-color: #fffbeb; border-color: #fde68a; }
+
+        .input-inline-hint {
+            position: absolute;
+            left: 3rem; 
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            color: #d97706;
+            pointer-events: none;
+            font-weight: bold;
+            opacity: 0.8;
+            line-height: 1;
+        }
+
+        .input-box { background-color: rgba(248, 250, 252, 0.5); padding: 0.35rem; border-radius: 6px; border: 1px solid #f1f5f9; transition: all 0.2s; }
+        .hidden { display: none !important; }
+
+        .results-area { 
+            grid-column: span 8; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            height: 100%;
+            background-color: rgba(248, 250, 252, 0.3); 
+        }
+
+        .recommendation-card { background-color: white; padding: 0.7rem 1rem; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; }
+        .best-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 99px; background-color: #ecfdf5; color: #059669; font-size: 0.7rem; font-weight: bold; border: 1px solid #d1fae5; width: max-content; text-transform: uppercase; }
+        .best-title { font-size: 1.1rem; font-weight: 900; color: #1e293b; }
+
+        .tax-display { display: flex; align-items: center; gap: 1rem; background-color: #f8fafc; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #f1f5f9; }
+        .tax-display-inner { display: flex; flex-direction: column; align-items: flex-end; }
+        .tax-label { font-size: 0.7rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; text-align: right; }
+        .tax-applicability { font-size: 0.65rem; color: #6366f1; font-weight: 900; margin-bottom: 2px; background: #eef2ff; padding: 1px 4px; border-radius: 3px; }
+        .tax-value { font-family: monospace; font-weight: 900; font-size: 1.7rem; color: #1e293b; line-height: 1; }
+        .tax-sub-value { font-family: monospace; font-size: 1rem; font-weight: bold; color: #64748b; }
+
+        .scrollable-content {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+        }
+
+        .calc-details { 
+            padding: 1rem; 
+            background-color: rgba(238, 242, 255, 0.4); 
+            border-bottom: 1px solid #e0e7ff; 
+            flex-shrink: 0;
+        }
+        .calc-details h4 { font-size: 0.85rem; font-weight: bold; color: #4338ca; font-style: italic; border-bottom: 1px solid rgba(199, 210, 254, 0.5); padding-bottom: 4px; margin-bottom: 8px; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
+        
+        .calc-text { font-family: monospace; font-size: 0.83rem; color: #334155; line-height: 1.5; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; }
+        .sub-calc-text { color: #94a3b8; font-size: 0.78rem; }
+
+        .logic-warning { color: #ea580c; background-color: #fff7ed; padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid #ffedd5; margin-bottom: 8px; font-size: 0.8rem; line-height: 1.4; }
+
+        .plan-list { 
+            flex: 1 0 auto; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .plan-item { padding: 0.3rem 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; transition: background-color 0.2s; flex-shrink: 0; }
+        .plan-item:hover { background-color: #f8fafc; }
+        .plan-item.best { background-color: rgba(238, 242, 255, 0.4); }
+        .plan-name { font-weight: bold; font-size: 0.8rem; color: #475569; display: flex; align-items: center; gap: 4px; overflow: hidden; }
+        .plan-name.best { color: #3730a3; }
+        .win-tag { font-size: 0.6rem; background-color: #4f46e5; color: white; padding: 1px 3px; border-radius: 2px; font-weight: 900; flex-shrink: 0; }
+
+        footer { background-color: white; padding: 0.5rem 1rem; border-top: 1px solid #f1f5f9; font-size: 0.75rem; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .footer-links { display: flex; gap: 1.2rem; }
+        .verified { font-weight: bold; text-transform: uppercase; color: #4f46e5; opacity: 0.3; }
+
+        .text-indigo { color: #4338ca; font-weight: bold; }
+        .text-pink { color: #ec4899; font-weight: bold; }
+        .text-emerald { color: #10b981 !important; }
+        .border-left-sep { border-left: 1px solid #e2e8f0; padding-left: 1.2rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .bt-indigo { border-top: 1px solid rgba(199, 210, 254, 0.5); padding-top: 4px; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.02); }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-title">
+                TAIWAN TAX 
+                <select id="yearSelect" class="year-select">
+                    <option value="114" selected>114年度 (2025)</option>
+                    <option value="113">113年度 (2024)</option>
+                    <option value="112">112年度 (2023)</option>
+                    <option value="111">111年度 (2022)</option>
+                    <option value="110">110年度 (2021)</option>
+                </select>
+            </div>
+            <p class="header-subtitle">110~114年 綜所稅簡易試算</p>
+        </header>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <!-- 第一區塊：報稅基礎 -->
+                <section>
+                    <h2>報稅基礎 (人)</h2>
+                    <div class="input-grid base-info-grid">
+                        <div class="input-group full">
+                            <div class="filing-header">
+                                <label class="label-dark">申報類別</label>
+                                <span id="displayTotalCount" class="total-count-badge">總人數：0 人</span>
+                            </div>
+                            <div class="toggle-container" id="filingToggle">
+                                <div class="toggle-btn" data-value="single">單身申報</div>
+                                <div class="toggle-btn active" data-value="married">夫妻合併申報</div>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label class="label-dark">未滿70歲(人數)</label>
+                            <input type="text" id="dependents" placeholder="0" inputmode="tel">
+                        </div>
+                        <div class="input-group">
+                            <label class="label-dark">70歲以上(人數)</label>
+                            <input type="text" id="dependents70Plus" placeholder="0" inputmode="tel">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 第二區塊：年度所得 -->
+                <section style="border-top: 1px solid #f1f5f9; padding-top: 6px;">
+                    <h2 class="secondary">年度所得 (元)</h2>
+                    <div class="input-box">
+                        <div class="input-grid income-sub-grid" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="input-group"><label class="text-indigo">本人薪資</label><input type="text" id="hSalary" placeholder="0" inputmode="tel"></div>
+                            <div class="input-group"><label>本人其他</label><input type="text" id="hOther" placeholder="0" inputmode="tel"></div>
+                            <div class="input-group"><label>本人股利</label><input type="text" id="hDiv" placeholder="0" inputmode="tel"></div>
+                        </div>
+                    </div>
+                    <div id="spouseIncomeBox" class="input-box" style="background-color: rgba(251, 242, 245, 0.4); border-color: rgba(24bc, 190, 206, 0.2);">
+                        <div class="input-grid income-sub-grid" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="input-group"><label class="text-pink">配偶薪資</label><input type="text" id="wSalary" placeholder="0" inputmode="tel"></div>
+                            <div class="input-group"><label>配偶其他</label><input type="text" id="wOther" placeholder="0" inputmode="tel"></div>
+                            <div class="input-group"><label>配偶股利</label><input type="text" id="wDiv" placeholder="0" inputmode="tel"></div>
+                        </div>
+                    </div>
+                    <div class="input-grid income-bottom-grid" style="grid-template-columns: repeat(3, 1fr); padding: 0 4px;">
+                        <div class="input-group"><label style="color: #6366f1; font-weight: bold;">親屬薪資</label><input type="text" id="relSalary" placeholder="0" inputmode="tel"></div>
+                        <div class="input-group"><label style="color: #6366f1; font-weight: bold;">全戶利息</label><input type="text" id="intSavings" placeholder="0" inputmode="tel"></div>
+                        <div class="input-group"><label style="color: #6366f1; font-weight: bold;">其餘所得</label><input type="text" id="othIncome" placeholder="0" inputmode="tel"></div>
+                    </div>
+                </section>
+
+                <section style="border-top: 1px solid #f1f5f9; padding-top: 6px;">
+                    <h2 class="secondary">特別扣除與抵減</h2>
+                    <div class="input-grid special-grid">
+                        <div class="input-group"><label>幼兒學前(人數)</label><div class="relative-input-wrapper"><input type="text" id="childUnder6" placeholder="0" class="input-special" inputmode="tel"><span id="hintChild" class="input-inline-hint">6歲以下</span></div></div>
+                        <div class="input-group"><label title="特殊情況下孫子女亦適用">教育學費(人數)</label><div class="relative-input-wrapper"><input type="text" id="eduCount" placeholder="0" class="input-special" inputmode="tel"><span id="hintEdu" class="input-inline-hint">大專以上</span></div></div>
+                        <div class="input-group"><label>長期照顧(人數)</label><input type="text" id="longTermCare" placeholder="0" class="input-special" inputmode="tel"></div>
+                        <div class="input-group"><label>身心障礙(人數)</label><input type="text" id="disabilityCount" placeholder="0" class="input-special" inputmode="tel"></div>
+                        
+                        <div class="input-group"><label class="label-strong">已扣繳稅額</label><input type="text" id="withheldTax" placeholder="0" inputmode="tel"></div>
+                        <div class="input-group"><label>列舉扣除額</label><input type="text" id="itemizedDeduction" placeholder="0" inputmode="tel"></div>
+                        <div class="input-group"><label>房屋租金支出</label><input type="text" id="rentExpense" placeholder="0" inputmode="tel"></div>
+                        <div class="input-group"><label>其餘扣除額</label><input type="text" id="otherDeductions" placeholder="0" inputmode="tel"></div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="results-area">
+                <!-- 頂部固定推薦卡片 -->
+                <div class="recommendation-card">
+                    <div class="recommendation-info">
+                        <div id="bestChoiceTag" class="best-tag hidden"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Best Choice</div>
+                        <h3 id="bestPlanTitle" class="best-title">請輸入資料</h3>
+                    </div>
+                    <div class="tax-display">
+                        <div class="tax-display-inner"><div id="bestTaxApplicability" class="tax-applicability"></div><div id="bestPayLabel" class="tax-label">應自行繳納稅額</div><div id="bestFinalPay" class="tax-value">$0</div></div>
+                        <div class="border-left-sep tax-display-inner"><div class="tax-label">應納稅額</div><div id="bestTaxTotal" class="tax-sub-value">$0</div></div>
+                    </div>
+                </div>
+
+                <!-- 統一滾動內容區域 -->
+                <div class="scrollable-content">
+                    <div id="calcDetailBlock" class="calc-details">
+                        <h4><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> 稅金計算明細：</h4>
+                        <div id="calcDetailContent" class="calc-text">請在左側輸入數據進行試算...</div>
+                    </div>
+                    <div id="resultsList" class="plan-list"></div>
+                </div>
+
+                <!-- 底部固定參數資訊 -->
+                <footer><div class="footer-links" id="footerInfo"></div><div class="developer-credit">Developed by skyuns<span class="verified"> | OFFLINE PRECISION</span></div></footer>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const MAX_AMOUNT = 999999999;
+            const MAX_PEOPLE = 10;
+            let currentFilingStatus = 'married';
+
+            const YEAR_CONFIGS = {
+                "114": { exemption: 97000, stdSingle: 131000, stdMarried: 262000, salaryDed: 218000, ltcDed: 180000, disabilityDed: 218000, basicLiving: 213000, brackets: [{ limit: 590000, rate: 0.05, constant: 0 }, { limit: 1330000, rate: 0.12, constant: 41300 }, { limit: 2660000, rate: 0.20, constant: 147700 }, { limit: 4980000, rate: 0.30, constant: 413700 }, { limit: Infinity, rate: 0.40, constant: 911700 }] },
+                "113": { exemption: 97000, stdSingle: 131000, stdMarried: 262000, salaryDed: 218000, ltcDed: 120000, disabilityDed: 218000, basicLiving: 210000, brackets: [{ limit: 590000, rate: 0.05, constant: 0 }, { limit: 1330000, rate: 0.12, constant: 41300 }, { limit: 2660000, rate: 0.20, constant: 147700 }, { limit: 4980000, rate: 0.30, constant: 413700 }, { limit: Infinity, rate: 0.40, constant: 911700 }] },
+                "112": { exemption: 92000, stdSingle: 124000, stdMarried: 248000, salaryDed: 207000, ltcDed: 120000, disabilityDed: 207000, basicLiving: 202000, brackets: [{ limit: 560000, rate: 0.05, constant: 0 }, { limit: 1260000, rate: 0.12, constant: 39200 }, { limit: 2520000, rate: 0.20, constant: 140000 }, { limit: 4720000, rate: 0.30, constant: 392000 }, { limit: Infinity, rate: 0.40, constant: 864000 }] },
+                "111": { exemption: 92000, stdSingle: 124000, stdMarried: 248000, salaryDed: 207000, ltcDed: 120000, disabilityDed: 207000, basicLiving: 196000, brackets: [{ limit: 560000, rate: 0.05, constant: 0 }, { limit: 1260000, rate: 0.12, constant: 39200 }, { limit: 2520000, rate: 0.20, constant: 140000 }, { limit: 4720000, rate: 0.30, constant: 392000 }, { limit: Infinity, rate: 0.40, constant: 864000 }] },
+                "110": { exemption: 88000, stdSingle: 120000, stdMarried: 240000, salaryDed: 200000, ltcDed: 120000, disabilityDed: 200000, basicLiving: 192000, brackets: [{ limit: 540000, rate: 0.05, constant: 0 }, { limit: 1210000, rate: 0.12, constant: 37800 }, { limit: 2420000, rate: 0.20, constant: 134600 }, { limit: 4530000, rate: 0.30, constant: 376600 }, { limit: Infinity, rate: 0.40, constant: 829600 }] }
+            };
+
+            function getTaxInfo(net, brackets) {
+                if (net <= 0) return { tax: 0, rate: 0, constant: 0 };
+                const b = brackets.find(item => net <= item.limit) || brackets[brackets.length - 1];
+                return { tax: Math.floor(net * b.rate - b.constant), rate: b.rate, constant: b.constant };
+            }
+
+            const getV = id => {
+                const el = document.getElementById(id);
+                if (!el) return 0;
+                return el.value.split('+').reduce((sum, part) => {
+                    const num = parseFloat(part.replace(/,/g, '')) || 0;
+                    return sum + num;
+                }, 0);
+            };
+
+            const moneyInputIds = ['hSalary', 'hOther', 'hDiv', 'wSalary', 'wOther', 'wDiv', 'relSalary', 'intSavings', 'othIncome', 'rentExpense', 'withheldTax', 'otherDeductions', 'itemizedDeduction'];
+            const countInputIds = ['dependents', 'dependents70Plus', 'childUnder6', 'longTermCare', 'disabilityCount', 'eduCount'];
+            const allInputIds = [...moneyInputIds, ...countInputIds];
+
+            function handleAmountInput(el) {
+                let val = el.value.replace(/[^0-9+]/g, '');
+                val = val.split('+').map(part => part.replace(/^0+(?=\d)/g, '')).join('+');
+                if (!val.includes('+')) {
+                    let num = parseInt(val) || 0;
+                    if (num > MAX_AMOUNT) num = MAX_AMOUNT;
+                    el.value = (num === 0 && val === "") ? "" : num.toLocaleString();
+                } else {
+                    if (val.length > 50) val = val.substring(0, 50);
+                    el.value = val;
+                }
+                calculate();
+            }
+
+            function finalizeAmountInput(el) {
+                const total = getV(el.id);
+                const clamped = Math.min(total, MAX_AMOUNT);
+                el.value = clamped === 0 ? "" : clamped.toLocaleString();
+                calculate();
+            }
+
+            function handleCountInput(el) {
+                let val = el.value.replace(/\D/g, '');
+                val = val.replace(/^0+(?=\d)/g, '');
+                if (val.length > 2) val = val.substring(0, 2);
+                const num = parseInt(val) || 0;
+                if (num > MAX_PEOPLE) val = MAX_PEOPLE.toString();
+                el.value = val;
+                calculate();
+            }
+
+            function handleInput(el, id) {
+                if (moneyInputIds.includes(id)) handleAmountInput(el);
+                else handleCountInput(el);
+            }
+
+            function updateHints() {
+                const cV = document.getElementById('childUnder6').value;
+                const eV = document.getElementById('eduCount').value;
+                document.getElementById('hintChild').style.display = (cV === "" || cV === "0") ? "block" : "none";
+                document.getElementById('hintEdu').style.display = (eV === "" || eV === "0") ? "block" : "none";
+            }
+
+            const filingToggle = document.getElementById('filingToggle');
+            filingToggle.addEventListener('click', (e) => {
+                const btn = e.target.closest('.toggle-btn');
+                if (!btn) return;
+                currentFilingStatus = btn.dataset.value;
+                filingToggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const sB = document.getElementById('spouseIncomeBox');
+                if (currentFilingStatus === 'single') sB.classList.add('hidden'); else sB.classList.remove('hidden');
+                calculate();
+            });
+
+            allInputIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', () => handleInput(el, id));
+                if (moneyInputIds.includes(id)) {
+                    el.addEventListener('blur', () => finalizeAmountInput(el));
+                }
+            });
+
+            document.getElementById('yearSelect').addEventListener('change', calculate);
+
+            function calculate() {
+                const yearVal = document.getElementById('yearSelect').value;
+                const cfg = YEAR_CONFIGS[yearVal];
+                const countUnder70 = getV('dependents'), count70Plus = getV('dependents70Plus');
+                const personCount = countUnder70 + count70Plus;
+                document.getElementById('displayTotalCount').innerText = `總人數：${personCount} 人`;
+
+                const taxpayers = (currentFilingStatus === 'married' ? 2 : 1);
+                
+                if (personCount < taxpayers) {
+                    document.getElementById('bestPlanTitle').innerText = "申報人數不足";
+                    const errorMsg = (currentFilingStatus === 'single') 
+                        ? "請先輸入申報人數：單身申報，總人數至少需為 1 人(含本人)。" 
+                        : "請先輸入申報人數：夫妻合併申報，總人數至少需為 2 人(含本人及配偶)。";
+                    resetResults(errorMsg); 
+                    return;
+                }
+
+                const hSal = getV('hSalary'), hOth = getV('hOther'), hDiv = getV('hDiv');
+                const wSal = currentFilingStatus === 'single' ? 0 : getV('wSalary'), wOth = currentFilingStatus === 'single' ? 0 : getV('wOther'), wDiv = currentFilingStatus === 'single' ? 0 : getV('wDiv');
+                const relSal = getV('relSalary'), intSav = getV('intSavings'), othInc = getV('othIncome'), rentInput = getV('rentExpense');
+                const withheld = getV('withheldTax'), extraDed = getV('otherDeductions'), itemizedDed = getV('itemizedDeduction');
+                const countU6 = getV('childUnder6'), countLTC = getV('longTermCare'), countDis = getV('disabilityCount'), countEdu = getV('eduCount');
+
+                let warnings = [];
+                const dependentsLimit = personCount - taxpayers;
+                if (countU6 + countEdu > dependentsLimit) {
+                    warnings.push(`提醒：幼兒與大學生共 ${countU6 + countEdu} 人，但全戶總人數僅 ${personCount} 人。請檢查是否漏填。`);
+                }
+                if (countDis > personCount) {
+                    warnings.push(`提醒：身心障礙人數 ${countDis} 人，但全戶總人數僅 ${personCount} 人。請檢查是否漏填。`);
+                }
+                if (countLTC > personCount) {
+                    warnings.push(`提醒：長期照顧人數 ${countLTC} 人，但全戶總人數僅 ${personCount} 人。請檢查是否漏填。`);
+                }
+                let logicError = warnings.join("<br>");
+
+                let childAmt = (parseInt(yearVal) >= 113) ? (countU6 >= 1 ? 150000 + (countU6-1)*225000 : 0) : countU6*120000;
+                const disAmtVal = countDis*cfg.disabilityDed, ltcAmtVal = countLTC*cfg.ltcDed, eduAmtVal = countEdu*25000;
+                
+                const savingsDedHousehold = Math.min(intSav, 270000);
+                const specialGroupBase = childAmt + ltcAmtVal + disAmtVal + eduAmtVal;
+                const stdDed = currentFilingStatus === 'single' ? cfg.stdSingle : cfg.stdMarried;
+                const chosenGeneralDed = itemizedDed > stdDed ? itemizedDed : stdDed;
+                const totalExemption = countUnder70 * cfg.exemption + (count70Plus * Math.floor(cfg.exemption * 1.5));
+                const totalSalDed = Math.min(hSal, cfg.salaryDed) + Math.min(currentFilingStatus === 'single' ? 0 : wSal, cfg.salaryDed) + Math.min(relSal, cfg.salaryDed);
+                
+                const rentComparison = Math.min(rentInput, 180000);
+                const comparisonSumBase = totalExemption + chosenGeneralDed + specialGroupBase + extraDed + savingsDedHousehold + (parseInt(yearVal) >= 113 ? rentComparison : 0);
+                const livingDiff = Math.max(0, personCount * cfg.basicLiving - comparisonSumBase);
+                
+                const calcPath = (fType, splitDiv) => {
+                    const totalDivInput = hDiv + wDiv;
+                    let div85Credit = splitDiv ? 0 : Math.min(Math.ceil(totalDivInput * 0.085), 80000);
+                    let div28Tax = splitDiv ? Math.floor(totalDivInput * 0.28) : 0;
+                    
+                    let rentDeduction = 0, rentExcluded = false;
+                    if (parseInt(yearVal) >= 113) {
+                        const netPreRent = Math.max(0, (hSal+hOth+wSal+wOth+relSal+intSav+othInc+(splitDiv?0:totalDivInput)) - (comparisonSumBase + livingDiff) - totalSalDed);
+                        const bracketCheck = getTaxInfo(netPreRent, cfg.brackets);
+                        if (bracketCheck.rate < 0.20 && !splitDiv) {
+                            rentDeduction = Math.min(Math.floor(rentInput), 180000);
+                        } else if (rentInput > 0) rentExcluded = true;
+                    }
+
+                    const subTotalDeductions = chosenGeneralDed + specialGroupBase + extraDed + savingsDedHousehold + rentDeduction;
+                    const incomeTotal = hSal+hOth+wSal+wOth+relSal+intSav+othInc+(splitDiv?0:totalDivInput);
+                    const totalA = incomeTotal - totalSalDed;
+                    let totalHouseholdNet = Math.max(0, totalA - totalExemption - subTotalDeductions - livingDiff);
+                    
+                    let pNet = 0, rNet = 0, pRes = { tax: 0, rate: 0, constant: 0 }, rRes = { tax: 0, rate: 0, constant: 0 }, pLabel = "", pIncSource = 0, pSalDSource = 0, sUsedPart = 0;
+                    
+                    if (fType === 1) { 
+                        rNet = totalHouseholdNet; rRes = getTaxInfo(rNet, cfg.brackets); 
+                    } else {
+                        let pInc = 0, pOth = 0, pDiv = 0, pSalD = 0;
+                        if (fType === 2) { pInc = wSal; pSalD = Math.min(wSal, cfg.salaryDed); pLabel = "配偶薪資"; }
+                        else if (fType === 3) { pInc = hSal; pSalD = Math.min(hSal, cfg.salaryDed); pLabel = "本人薪資"; }
+                        else if (fType === 4) { pInc = wSal; pOth = wOth; pDiv = splitDiv?0:wDiv; pSalD = Math.min(wSal, cfg.salaryDed); pLabel = "配偶各類"; }
+                        else if (fType === 5) { pInc = hSal; pOth = hOth; pDiv = splitDiv?0:hDiv; pSalD = Math.min(hSal, cfg.salaryDed); pLabel = "本人各類"; }
+                        pIncSource = pInc + pOth + pDiv;
+                        pSalDSource = pSalD;
+                        const poolGrossRest = incomeTotal - (pInc + pOth + pDiv);
+                        const poolDedExclSavings = totalExemption + chosenGeneralDed + specialGroupBase + extraDed + livingDiff + rentDeduction - savingsDedHousehold;
+                        const poolNetBeforeSavings = Math.max(0, poolGrossRest - (totalSalDed - pSalD) - poolDedExclSavings);
+                        const savingsUsedByRest = Math.min(poolNetBeforeSavings, savingsDedHousehold);
+                        sUsedPart = savingsDedHousehold - savingsUsedByRest;
+                        pNet = Math.max(0, (pInc - pSalD) + pOth + pDiv - cfg.exemption - sUsedPart);
+                        rNet = Math.max(0, totalHouseholdNet - pNet);
+                        pRes = getTaxInfo(pNet, cfg.brackets); rRes = getTaxInfo(rNet, cfg.brackets);
+                    }
+                    const totalTax = pRes.tax + rRes.tax + div28Tax;
+                    return { 
+                        tax: totalTax, finalPay: totalTax - withheld - div85Credit, 
+                        div85Credit, div28Tax, isSplitDiv: splitDiv, 
+                        pRes, rRes, pNet, rNet, totalHouseholdNet, hDiv, wDiv, 
+                        rentDeduction, rentExcluded, totalA, subTotalDeductions, pLabel, pIncSource, pSalDSource,
+                        savingsDedHousehold, incomeTotal, livingDiff,
+                        childAmt, eduAmtVal, ltcAmtVal, disAmtVal, sUsedPart
+                    };
+                };
+
+                const names = ['全戶合併計稅', '配偶薪資分開', '本人薪資分開', '配偶各類分開', '本人各類分開'];
+                let allMethods = [];
+                for (let i = 1; i <= (currentFilingStatus === 'married' ? 5 : 1); i++) {
+                    allMethods.push({ title: names[i-1], dM: '合併計稅(8.5%抵減)', ...calcPath(i, false) });
+                    allMethods.push({ title: names[i-1], dM: '分離計稅(28%稅率)', ...calcPath(i, true) });
+                }
+                allMethods.sort((a, b) => a.finalPay - b.finalPay);
+                render(allMethods, { totalSalDed, totalExemption, chosenGeneralDed, useItemized: itemizedDed > stdDed, withheld, rentInput, livingDiff, cfg, logicError });
+            }
+
+            function resetResults(msg) {
+                document.getElementById('bestFinalPay').innerText = "$0";
+                document.getElementById('bestTaxTotal').innerText = "$0";
+                document.getElementById('calcDetailContent').innerText = msg;
+                document.getElementById('bestChoiceTag').classList.add('hidden');
+                document.getElementById('resultsList').innerHTML = "";
+                document.getElementById('footerInfo').innerHTML = "";
+                document.getElementById('bestFinalPay').classList.remove('text-emerald');
+            }
+
+            function render(methods, core) {
+                const best = methods[0], yearVal = document.getElementById('yearSelect').value, cfg = core.cfg;
+                
+                const divMethodLabel = best.isSplitDiv ? "股利分離計稅" : "股利合併計稅";
+                document.getElementById('bestPlanTitle').innerHTML = `${best.title} <span style="display: inline-block;">(${divMethodLabel})</span>`;
+                
+                document.getElementById('bestTaxApplicability').innerText = `${parseInt(yearVal)+1}年報稅適用`;
+                document.getElementById('bestChoiceTag').classList.remove('hidden');
+                document.getElementById('bestFinalPay').innerText = '$' + Math.abs(best.finalPay).toLocaleString();
+                document.getElementById('bestTaxTotal').innerText = '$' + best.tax.toLocaleString();
+
+                const finalPayEl = document.getElementById('bestFinalPay');
+                const bestPayLabel = document.getElementById('bestPayLabel');
+                
+                if (best.finalPay < 0) {
+                    bestPayLabel.innerText = "應退稅額";
+                    finalPayEl.classList.add('text-emerald');
+                } else {
+                    bestPayLabel.innerText = "應自行繳納稅額";
+                    finalPayEl.classList.remove('text-emerald');
+                }
+
+                document.getElementById('footerInfo').innerHTML = `
+                    <span>●免稅額:${cfg.exemption.toLocaleString()}</span>
+                    <span>●標準扣除額:${(currentFilingStatus === 'single' ? cfg.stdSingle : cfg.stdMarried).toLocaleString()}</span>
+                    <span>●基本生活費:${cfg.basicLiving.toLocaleString()}</span>
+                `;
+
+                const dedLabel = core.useItemized ? "列舉扣除" : "標準扣除";
+                let subItems = [];
+                subItems.push(`${dedLabel}$${core.chosenGeneralDed.toLocaleString()}`);
+                if (best.childAmt > 0) subItems.push(`幼兒$${best.childAmt.toLocaleString()}`);
+                if (best.eduAmtVal > 0) subItems.push(`學費$${best.eduAmtVal.toLocaleString()}`);
+                if (best.ltcAmtVal > 0) subItems.push(`長照$${best.ltcAmtVal.toLocaleString()}`);
+                if (best.disAmtVal > 0) subItems.push(`身心障礙$${best.disAmtVal.toLocaleString()}`);
+                if (best.savingsDedHousehold > 0) subItems.push(`儲蓄$${best.savingsDedHousehold.toLocaleString()}`);
+                
+                let rentInfo = "";
+                if (parseInt(yearVal) >= 113) {
+                    if (best.rentExcluded) rentInfo = " + <span style='color:#ef4444;'>房租(不適用排富)</span>";
+                    else if (best.rentDeduction > 0) subItems.push(`房租$${best.rentDeduction.toLocaleString()}`);
+                } else if (core.rentInput > 0) {
+                    rentInfo = " + <span style='color:#64748b;'>房租(舊制僅限列舉)</span>";
+                }
+
+                const totalDivInput = best.hDiv + best.wDiv;
+                let divLine = "";
+                if (totalDivInput > 0) {
+                    if (best.isSplitDiv) {
+                        divLine = `• 股利分離 = $${totalDivInput.toLocaleString()} * 28% = $${best.div28Tax.toLocaleString()}\n`;
+                    } else {
+                        divLine = `• 股利抵減 = $${totalDivInput.toLocaleString()} * 8.5% = $${best.div85Credit.toLocaleString()} <span class="sub-calc-text">(上限8萬)</span>\n`;
+                    }
+                }
+
+                let sUsedPartStr = "";
+                if (best.sUsedPart > 0) sUsedPartStr = ` - 儲蓄$${best.sUsedPart.toLocaleString()}`;
+
+                let detailHtml = `${core.logicError ? `<div class="logic-warning">${core.logicError}</div>` : ''}1. 綜合所得總額(A) = 收入總額$${best.incomeTotal.toLocaleString()} - 薪資特別扣除額$${core.totalSalDed.toLocaleString()} = $${best.totalA.toLocaleString()}
+2. 全部免稅額(B) = $${core.totalExemption.toLocaleString()}
+3. 全部扣除額(C) = $${best.subTotalDeductions.toLocaleString()}
+   <span class="sub-calc-text">(含${subItems.join(' + ')}${rentInfo})</span>
+4. 基本生活費差額(D) = $${core.livingDiff.toLocaleString()}
+5. 綜合所得淨額 = A - B - C - D = $${best.totalHouseholdNet.toLocaleString()} <span class="sub-calc-text">(股利計稅：${best.dM})</span>
+
+BEST [${best.title}]
+${best.pNet === 0 ? 
+`• 淨額查表：$${best.rNet.toLocaleString()} * ${Math.round(best.rRes.rate * 100)}% - 累進差額$${best.rRes.constant.toLocaleString()} = $${best.tax.toLocaleString()}` :
+`• 分開部分：$${best.pNet.toLocaleString()} <span class="sub-calc-text">= (${best.pLabel}$${best.pIncSource.toLocaleString()} - 薪扣$${best.pSalDSource.toLocaleString()} - 免稅$${cfg.exemption.toLocaleString()}${sUsedPartStr})</span>
+  稅額計算：$${best.pNet.toLocaleString()} * ${Math.round(best.pRes.rate * 100)}% - 累進差額$${best.pRes.constant.toLocaleString()} = $${best.pRes.tax.toLocaleString()}
+• 合併部分：$${best.rNet.toLocaleString()} <span class="sub-calc-text">= (總淨額$${best.totalHouseholdNet.toLocaleString()} - 分開淨額$${best.pNet.toLocaleString()})</span>
+  稅額計算：$${best.rNet.toLocaleString()} * ${Math.round(best.rRes.rate * 100)}% - 累進差額$${best.rRes.constant.toLocaleString()} = $${best.rRes.tax.toLocaleString()}
+• 應納稅額 = $${best.pRes.tax.toLocaleString()} + $${best.rRes.tax.toLocaleString()} = $${best.tax.toLocaleString()}`
+}
+${divLine}● ${best.finalPay >= 0 ? '自行繳納' : '應退稅額'} = 應納稅額$${best.tax.toLocaleString()} - 已扣繳$${core.withheld.toLocaleString()} - 股利抵減$${best.div85Credit.toLocaleString()} = $${best.finalPay.toLocaleString()}`;
+
+                document.getElementById('calcDetailContent').innerHTML = detailHtml;
+                const listEl = document.getElementById('resultsList'); listEl.innerHTML = '';
+                methods.forEach((p, i) => {
+                    const row = document.createElement('div');
+                    row.className = 'plan-item' + (i === 0 ? ' best' : '');
+                    row.innerHTML = `
+                        <div class="plan-name ${i === 0 ? 'best' : ''}" style="display:flex; align-items:center; gap:6px; flex:1; min-width:0; white-space:nowrap;">
+                            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                                ${i === 0 ? '<span class="win-tag">WIN</span>' : `<span style="color: #cbd5e1; font-size: 0.55rem;">#${i+1}</span>`} 
+                                <span>${p.title}</span>
+                            </div>
+                            <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal; overflow:hidden; text-overflow:ellipsis;">${p.dM}</span>
+                        </div>
+                        <div class="tax-sub-value" style="font-size: 0.75rem; flex-shrink:0; margin-left:8px; white-space:nowrap;">
+                            ${p.finalPay >= 0 ? '應繳' : '應退'} $${Math.abs(p.finalPay).toLocaleString()}
+                        </div>`;
+                    listEl.appendChild(row);
+                });
+            }
+            window.addEventListener('DOMContentLoaded', () => { updateHints(); calculate(); });
+        })();
+    </script>
+</body>
+</html>
